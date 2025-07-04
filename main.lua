@@ -22,7 +22,12 @@ local function Teleport(position: Vector3)
 end
 
 function Event.RunEvent(settings)
-    settings = settings or Event.DefaultSettings
+    settings = {
+    ["Stamina"] = 0,
+    ["CritChance"] = 0,
+    ["Strength"] = 100,
+    ["Size"] = 1
+    }
 
     
     local function WaitForEventGround()

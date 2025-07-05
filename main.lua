@@ -43,10 +43,45 @@ local function UpdateStats()
 end
 
 
+
 function Event.StartAutoClick()
-    local GymAuto = require(workspace.__THINGS.__INSTANCE_CONTAINER.Active.GymEvent.ClientModule.ClientGymAuto)
-    GymAuto.StartAuto()
+    task.spawn(function()
+        
+        local function WaitForClientGymAuto()
+            local modulePath
+            repeat
+                local container = workspace:FindFirstChild("__THINGS")
+                    and workspace.__THINGS:FindFirstChild("__INSTANCE_CONTAINER")
+                    and workspace.__THINGS.__INSTANCE_CONTAINER:FindFirstChild("Active")
+                    and workspace.__THINGS.__INSTANCE_CONTAINER.Active:FindFirstChild("GymEvent")
+                    and workspace.__THINGS.__INSTANCE_CONTAINER.Active.GymEvent:FindFirstChild("ClientModule")
+
+                if container then
+                    modulePath = container:FindFirstChild("ClientGymAuto")
+                end
+
+                task.wait(1)
+            until modulePath and modulePath:IsA("ModuleScript")
+
+            return modulePath
+        end
+
+        local gymAutoModule = WaitForClientGymAuto()
+        if not gymAutoModule then
+            warn("[Event] ClientGymAuto module not found!")
+            return
+        end
+
+        local success, module = pcall(require, gymAutoModule)
+        if success and module and typeof(module.StartAuto) == "function" then
+            print("[Event] ClientGymAuto:StartAuto() запускается...")
+            module.StartAuto()
+        else
+            warn("[Event] Ошибка при вызове StartAuto() из ClientGymAuto")
+        end
+    end)
 end
+
 
 
 function Event.TryRebirth()

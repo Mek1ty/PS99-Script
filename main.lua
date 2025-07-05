@@ -4,7 +4,7 @@ local SaveModule = require(ReplicatedStorage.Library.Client.Save)
 local Types = require(ReplicatedStorage.Library.Types.Gym)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local GymAuto = require(workspace.__THINGS.__INSTANCE_CONTAINER.Active.GymEvent.ClientModule.ClientGymAuto)
+
 local Event = {}
 
 
@@ -44,6 +44,7 @@ end
 
 
 function Event.StartAutoClick()
+    local GymAuto = require(workspace.__THINGS.__INSTANCE_CONTAINER.Active.GymEvent.ClientModule.ClientGymAuto)
     GymAuto.StartAuto()
 end
 

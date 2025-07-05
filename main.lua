@@ -4,7 +4,7 @@ local SaveModule = require(ReplicatedStorage.Library.Client.Save)
 local Types = require(ReplicatedStorage.Library.Types.Gym)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-
+local GymAuto = require(workspace.__THINGS.__INSTANCE_CONTAINER.Active.GymEvent.ClientModule.ClientGymAuto)
 local Event = {}
 
 
@@ -44,18 +44,7 @@ end
 
 
 function Event.StartAutoClick()
-    task.spawn(function()
-        local ok, module = pcall(function()
-            return require(workspace.__THINGS.__INSTANCE_CONTAINER.Active.GymEvent.ClientModule.ClientGymAuto)
-        end)
-
-        if ok and module and typeof(module.StartAuto) == "function" then
-            print("[Event] Запуск StartAuto() из ClientGymAuto")
-            module.StartAuto()
-        else
-            warn("[Event] Не удалось запустить автоклик: ClientGymAuto не найден или повреждён")
-        end
-    end)
+    GymAuto.StartAuto()
 end
 
 

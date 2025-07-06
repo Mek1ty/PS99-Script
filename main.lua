@@ -4,7 +4,7 @@ local SaveModule = require(ReplicatedStorage.Library.Client.Save)
 local Types = require(ReplicatedStorage.Library.Types.Gym)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local GymTrain = require(workspace.__THINGS.__INSTANCE_CONTAINER.Active.GymEvent.ClientModule.GymTrain)
+
 local InstancingCmds = require(ReplicatedStorage.Library.Client.InstancingCmds)
 local InstanceZoneCmds = require(ReplicatedStorage.Library.Client.InstanceZoneCmds)
 
@@ -37,6 +37,7 @@ local function Teleport(position: Vector3)
 end
 
 function Event.TeleportToBestZone()
+    
     local bestZone = InstanceZoneCmds.GetMaximumOwnedZoneNumber()
 
     local zonePath = workspace.__THINGS.__INSTANCE_CONTAINER
@@ -89,8 +90,9 @@ function Event.StartAutoClick()
 
             return modulePath
         end
-
+        
         local gymAutoModule = WaitForClientGymAuto()
+        local GymTrain = require(workspace.__THINGS.__INSTANCE_CONTAINER.Active.GymEvent.ClientModule.GymTrain)
         if not gymAutoModule then
             warn("[Event] ClientGymAuto module not found!")
             return

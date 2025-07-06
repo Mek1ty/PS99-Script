@@ -90,24 +90,48 @@ function Event.StartAutoClick()
 
             return modulePath
         end
+
         
+        local function WaitForGymTrain()
+            local trainModule
+            repeat
+                local gymEvent = workspace:FindFirstChild("__THINGS")
+                    and workspace.__THINGS.__INSTANCE_CONTAINER:FindFirstChild("Active")
+                    and workspace.__THINGS.__INSTANCE_CONTAINER.Active:FindFirstChild("GymEvent")
+
+                if gymEvent and gymEvent:FindFirstChild("ClientModule") then
+                    trainModule = gymEvent.ClientModule:FindFirstChild("GymTrain")
+                end
+
+                task.wait(1)
+            until trainModule and trainModule:IsA("ModuleScript")
+
+            return trainModule
+        end
+
         local gymAutoModule = WaitForClientGymAuto()
-        local GymTrain = require(workspace.__THINGS.__INSTANCE_CONTAINER.Active.GymEvent.ClientModule.GymTrain)
-        if not gymAutoModule then
-            warn("[Event] ClientGymAuto module not found!")
+        local gymTrainModule = WaitForGymTrain()
+
+        if not gymAutoModule or not gymTrainModule then
+            warn("[Event] Не удалось найти ClientGymAuto или GymTrain")
             return
         end
 
-        local success, module = pcall(require, gymAutoModule)
-        if success and module and typeof(module.StartAuto) == "function" then
-            print("[Event] ClientGymAuto:StartAuto() запускается...")
-            GymTrain.SetTrainingByIndex(1) 
-            module.StartAuto()
+        local successAuto, auto = pcall(require, gymAutoModule)
+        local successTrain, GymTrain = pcall(require, gymTrainModule)
+
+        if successAuto and auto and typeof(auto.StartAuto) == "function"
+            and successTrain and GymTrain and typeof(GymTrain.SetTrainingByIndex) == "function" then
+
+            print("[Event] Установка режима тренировки и запуск автоклика")
+            GymTrain.SetTrainingByIndex(1)
+            auto.StartAuto()
         else
-            warn("[Event] Ошибка при вызове StartAuto() из ClientGymAuto")
+            warn("[Event] Ошибка при запуске автотренировки")
         end
     end)
 end
+
 
 local function GetOwnedZones()
     local owned = {}
@@ -240,7 +264,7 @@ end
 
 function Event.RunEvent(settings)
     settings = settings or Event.DefaultSettings
-    task.spawn(WaitForEventGround)
+    WaitForEventGround()
     Network:WaitForChild("Gym_SettingsUpdate"):FireServer(settings)
     print("Event settings updated.")
     task.spawn(Event.TeleportToBestZone)

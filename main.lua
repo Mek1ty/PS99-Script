@@ -17,7 +17,7 @@ local EventState = {
     Strength = 0,
     Rebirth = 0,
     RequiredStrength = 250,
-    MaxRebirths = 999,
+    MaxRebirths = 35,
     AutoClicking = true,
 }
 
@@ -47,10 +47,10 @@ function Event.TeleportToBestZone()
         local union = zonePath.PARTS_LOD.Path:FindFirstChild("Union")
         if union and union:IsA("BasePart") then
             Teleport(union.Position)
-            print("[Event] Телепорт в зону " .. bestZone)
+            print("[Event] Teleported to zone " .. bestZone)
         end
     else
-        warn("[Event] Не удалось найти путь для телепорта в зону " .. bestZone)
+        warn("[Event] Failed to locate teleport target for zone " .. bestZone)
     end
 end
 
@@ -61,12 +61,11 @@ local function UpdateStats()
     local Save = SaveModule.Get()
     if Save and Save.Gym then
         EventState.Strength = Save.Gym.Strength or 0
-        EventState.Rebirth = Save.Gym.Rebirth or 0
+        EventState.Rebirth = Save.Gym.Rebirths or 0
         EventState.RequiredStrength = Types.RebirthRequirements[EventState.Rebirth + 1] or math.huge
         EventState.MaxRebirths = Types.MAX_REBIRTHS or 999
     end
 end
-
 
 
 function Event.StartAutoClick()
@@ -113,7 +112,7 @@ function Event.StartAutoClick()
         local gymTrainModule = WaitForGymTrain()
 
         if not gymAutoModule or not gymTrainModule then
-            warn("[Event] Не удалось найти ClientGymAuto или GymTrain")
+            warn("[Event] Could not find ClientGymAuto or GymTrain module")
             return
         end
 
@@ -123,11 +122,11 @@ function Event.StartAutoClick()
         if successAuto and auto and typeof(auto.StartAuto) == "function"
             and successTrain and GymTrain and typeof(GymTrain.SetTrainingByIndex) == "function" then
 
-            print("[Event] Установка режима тренировки и запуск автоклика")
+            print("[Event] Starting auto click with training mode 1")
             GymTrain.SetTrainingByIndex(1)
             auto.StartAuto()
         else
-            warn("[Event] Ошибка при запуске автотренировки")
+            warn("[Event] Failed to initialize auto training")
         end
     end)
 end
@@ -169,9 +168,7 @@ end
 
 
 function Event.TryBuyZoneForRebirth(currentRebirths)
-    print("Inside", currentRebirths)
     if not ShouldBuyZone(currentRebirths) then return end
-    print("1")
     local Save = SaveModule.Get()
     if not Save then return end
 
@@ -180,7 +177,7 @@ function Event.TryBuyZoneForRebirth(currentRebirths)
     if requiredCoins == math.huge then return end
 
     while GetGymCoins() < requiredCoins do
-        print(string.format("[Event] Ожидаем %d GymCoins для зоны %d...", requiredCoins, targetZone))
+        print(string.format("[Event] Waiting for %d GymCoins to unlock zone %d...", requiredCoins, targetZone))
         task.wait(1)
     end
 
@@ -189,14 +186,14 @@ function Event.TryBuyZoneForRebirth(currentRebirths)
     end)
 
     if success then
-        print(string.format("[Event] Зона %d успешно куплена!", targetZone))
+        print(string.format("[Event] Zone %d successfully purchased!", targetZone))
 
         
         task.delay(1, function()
             Event.TeleportToBestZone()
         end)
     else
-        warn("[Event] Ошибка при покупке зоны:", result)
+        warn("[Event] Failed to purchase zone:", result)
     end
 end
 
@@ -210,9 +207,20 @@ function Event.TryRebirth()
 
     if EventState.Rebirth >= EventState.MaxRebirths then
         EventState.AutoClicking = false
-        warn("[Event] Достигнут максимальный ребиртх:", EventState.Rebirth)
+        warn("[Event] Max rebirths reached:", EventState.Rebirth)
         return
     end
+
+    if EventState.Rebirth > 0 and EventState.Rebirth % 5 == 0 then
+        local requiredZone = (EventState.Rebirth / 5) + 1
+        local ownedZone = InstanceZoneCmds.GetMaximumOwnedZoneNumber()
+
+        if ownedZone < requiredZone then
+            print(string.format("[Event] Zone %d is required before continuing rebirths past %d", requiredZone, EventState.Rebirth))
+            return
+        end
+    end
+
 
     if EventState.Strength >= EventState.RequiredStrength then
         local rebirthEvent = Network:FindFirstChild("Gym_Rebirth")
@@ -221,18 +229,18 @@ function Event.TryRebirth()
                 rebirthEvent:InvokeServer()
             end)
             if success then
-                print("[Event] Rebirth выполнен!")
+                print("[Event] Rebirth completed!")
                 task.wait(0.5)
                 UpdateStats()
-                print(EventState.Rebirth)
-                
+
                 Event.TryBuyZoneForRebirth(EventState.Rebirth)
             else
-                warn("[Event] Ошибка ребирта:", err)
+                warn("[Event] Rebirth failed:", err)
             end
         end
     end
 end
+
 
 
 
@@ -242,7 +250,7 @@ function Event.StartRebirthLoop()
             Event.TryRebirth()
             task.wait(5)
         end
-        warn("[Event] Цикл ребиртов завершён: достигнут лимит.")
+        warn("[Event] Rebirth loop stopped: max rebirths reached")
     end)
 end
 
@@ -266,7 +274,6 @@ local function WaitForEventGround()
         end
     until found
 end
-
 
 
 function Event.RunEvent(settings)

@@ -132,6 +132,34 @@ function Event.StartAutoClick()
 end
 
 
+local function FreezeCharacter()
+    task.spawn(function()
+        local humanoid
+        repeat
+            task.wait(0.5)
+            if LocalPlayer.Character then
+                humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            end
+        until humanoid
+
+        humanoid.WalkSpeed = 0
+        humanoid.JumpPower = 0
+        humanoid.AutoRotate = false
+
+        
+        while true do
+            if humanoid then
+                humanoid.WalkSpeed = 0
+                humanoid.JumpPower = 0
+                humanoid.AutoRotate = false
+            end
+            task.wait(0.5)
+        end
+    end)
+end
+
+
+
 local function GetOwnedZones()
     local owned = {}
     local save = InstanceZoneCmds.GetSaveTable()
@@ -146,7 +174,7 @@ end
 
 local function GetGymCoins()
     local Save = SaveModule.Get()
-    for _, entry in ipairs(Save.Inventory and Save.Inventory.Currency or {}) do
+    for _, entry in pairs(Save.Inventory.Currency) do
         if entry.id == "GymCoins" then
             return tonumber(entry._am) or 0
         end
@@ -284,7 +312,9 @@ function Event.RunEvent(settings)
     
     Network:WaitForChild("Gym_SettingsUpdate"):FireServer(settings)
     print("Event settings updated.")
+    FreezeCharacter()
     UpdateStats()
+
     Event.TryBuyZoneForRebirth(EventState.Rebirth)
     task.spawn(Event.TeleportToBestZone)
     task.spawn(Event.StartAutoClick)

@@ -272,13 +272,12 @@ function Event.RunEvent(settings)
     settings = settings or Event.DefaultSettings
     WaitForEventGround()
 
-    
-    UpdateStats()
-    Event.TryBuyZoneForRebirth(EventState.Rebirth)
 
     
     Network:WaitForChild("Gym_SettingsUpdate"):FireServer(settings)
     print("Event settings updated.")
+    UpdateStats()
+    task.spawn(Event.TryBuyZoneForRebirth(EventState.Rebirth))
     task.spawn(Event.TeleportToBestZone)
     task.spawn(Event.StartAutoClick)
     task.spawn(Event.StartRebirthLoop)

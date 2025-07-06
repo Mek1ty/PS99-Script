@@ -171,10 +171,12 @@ end
 function Event.TryBuyZoneForRebirth(currentRebirths)
     if not ShouldBuyZone(currentRebirths) then return end
 
+	print("1")
     local Save = SaveModule.Get()
     if not Save then return end
 
     local targetZone = InstanceZoneCmds.GetMaximumOwnedZoneNumber() + 1
+
     local requiredCoins = GetZoneCost(targetZone)
     if requiredCoins == math.huge then return end
 
@@ -189,16 +191,10 @@ function Event.TryBuyZoneForRebirth(currentRebirths)
 
     if success then
         print(string.format("[Event] Зона %d успешно куплена!", targetZone))
-
-        
-        task.delay(1, function()
-            Event.TeleportToBestZone()
-        end)
     else
         warn("[Event] Ошибка при покупке зоны:", result)
     end
 end
-
 
 
 
@@ -272,12 +268,13 @@ function Event.RunEvent(settings)
     settings = settings or Event.DefaultSettings
     WaitForEventGround()
 
+    
+    UpdateStats()
+    Event.TryBuyZoneForRebirth(EventState.Rebirth)
 
     
     Network:WaitForChild("Gym_SettingsUpdate"):FireServer(settings)
     print("Event settings updated.")
-    UpdateStats()
-    task.spawn(Event.TryBuyZoneForRebirth(EventState.Rebirth))
     task.spawn(Event.TeleportToBestZone)
     task.spawn(Event.StartAutoClick)
     task.spawn(Event.StartRebirthLoop)

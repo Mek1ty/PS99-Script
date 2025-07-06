@@ -169,9 +169,9 @@ end
 
 
 function Event.TryBuyZoneForRebirth(currentRebirths)
-	print("1")
+    print("Inside", currentRebirths)
     if not ShouldBuyZone(currentRebirths) then return end
-
+    print("1")
     local Save = SaveModule.Get()
     if not Save then return end
 
@@ -224,7 +224,7 @@ function Event.TryRebirth()
                 print("[Event] Rebirth выполнен!")
                 task.wait(0.5)
                 UpdateStats()
-
+                print(EventState.Rebirth)
                 
                 Event.TryBuyZoneForRebirth(EventState.Rebirth)
             else

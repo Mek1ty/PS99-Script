@@ -4,8 +4,13 @@ local SaveModule = require(ReplicatedStorage.Library.Client.Save)
 local Types = require(ReplicatedStorage.Library.Types.Gym)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+local GymTrain = require(workspace.__THINGS.__INSTANCE_CONTAINER.Active.GymEvent.ClientModule.GymTrain)
+local InstancingCmds = require(ReplicatedStorage.Library.Client.InstancingCmds)
+local InstanceZoneCmds = require(ReplicatedStorage.Library.Client.InstanceZoneCmds)
 
 local Event = {}
+
+
 
 
 local EventState = {
@@ -30,6 +35,25 @@ local function Teleport(position: Vector3)
         LocalPlayer.Character:MoveTo(position)
     end
 end
+
+function Event.TeleportToBestZone()
+    local bestZone = InstanceZoneCmds.GetMaximumOwnedZoneNumber()
+
+    local zonePath = workspace.__THINGS.__INSTANCE_CONTAINER
+        .Active.GymEvent:FindFirstChild(tostring(bestZone) .. " | Area " .. tostring(bestZone))
+
+    if zonePath and zonePath:FindFirstChild("PARTS_LOD") and zonePath.PARTS_LOD:FindFirstChild("Path") then
+        local union = zonePath.PARTS_LOD.Path:FindFirstChild("Union")
+        if union and union:IsA("BasePart") then
+            Teleport(union.Position)
+            print("[Event] Телепорт в зону " .. bestZone)
+        end
+    else
+        warn("[Event] Не удалось найти путь для телепорта в зону " .. bestZone)
+    end
+end
+
+
 
 
 local function UpdateStats()
@@ -75,12 +99,77 @@ function Event.StartAutoClick()
         local success, module = pcall(require, gymAutoModule)
         if success and module and typeof(module.StartAuto) == "function" then
             print("[Event] ClientGymAuto:StartAuto() запускается...")
+            GymTrain.SetTrainingByIndex(1) 
             module.StartAuto()
         else
             warn("[Event] Ошибка при вызове StartAuto() из ClientGymAuto")
         end
     end)
 end
+
+local function GetOwnedZones()
+    local owned = {}
+    local save = InstanceZoneCmds.GetSaveTable()
+    for key, value in pairs(save) do
+        local zoneId = tonumber(string.match(key, "%d+"))
+        if value and zoneId then
+            owned[zoneId] = true
+        end
+    end
+    return owned
+end
+
+local function GetGymCoins()
+    local Save = SaveModule.Get()
+    for _, entry in ipairs(Save.Inventory and Save.Inventory.Currency or {}) do
+        if entry.id == "GymCoins" then
+            return tonumber(entry._am) or 0
+        end
+    end
+    return 0
+end
+
+
+local function GetZoneCost(index)
+    local zones = InstancingCmds.Get().instanceZones
+    local zoneData = zones and zones[index]
+    return zoneData and zoneData.CurrencyCost or math.huge
+end
+
+local function ShouldBuyZone(currentRebirths)
+    return currentRebirths > 0 and currentRebirths % 5 == 0
+end
+
+
+
+function Event.TryBuyZoneForRebirth(currentRebirths)
+    if not ShouldBuyZone(currentRebirths) then return end
+
+    local Save = SaveModule.Get()
+    if not Save then return end
+
+    local targetZone = InstanceZoneCmds.GetMaximumOwnedZoneNumber() + 1
+
+    local requiredCoins = GetZoneCost(targetZone)
+    if requiredCoins == math.huge then return end
+
+    while GetGymCoins() < requiredCoins do
+        print(string.format("[Event] Ожидаем %d GymCoins для зоны %d...", requiredCoins, targetZone))
+        task.wait(1)
+    end
+
+    local success, result = pcall(function()
+        return Network:WaitForChild("InstanceZones_RequestPurchase"):InvokeServer("GymEvent", targetZone)
+    end)
+
+    if success then
+        print(string.format("[Event] Зона %d успешно куплена!", targetZone))
+    else
+        warn("[Event] Ошибка при покупке зоны:", result)
+    end
+end
+
+
 
 
 
@@ -103,12 +192,16 @@ function Event.TryRebirth()
                 print("[Event] Rebirth выполнен!")
                 task.wait(0.5)
                 UpdateStats()
+
+                
+                Event.TryBuyZoneForRebirth(EventState.Rebirth)
             else
                 warn("[Event] Ошибка ребирта:", err)
             end
         end
     end
 end
+
 
 
 function Event.StartRebirthLoop()
@@ -145,12 +238,12 @@ end
 
 function Event.RunEvent(settings)
     settings = settings or Event.DefaultSettings
-    WaitForEventGround()
+    task.spawn(WaitForEventGround)
     Network:WaitForChild("Gym_SettingsUpdate"):FireServer(settings)
     print("Event settings updated.")
-    task.wait(1)
-    Event.StartAutoClick()
-    Event.StartRebirthLoop()
+    task.spawn(Event.TeleportToBestZone)
+    task.spawn(Event.StartAutoClick)
+    task.spawn(Event.StartRebirthLoop)
 end
 
 

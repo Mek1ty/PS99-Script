@@ -189,21 +189,21 @@ local function GetZoneCost(index)
     return zoneData and zoneData.CurrencyCost or math.huge
 end
 
-local function ShouldBuyZone(currentRebirths)
-    return currentRebirths > 0 and currentRebirths % 5 == 0
-end
-
 
 
 function Event.TryBuyZoneForRebirth(currentRebirths)
-    if not ShouldBuyZone(currentRebirths) then return end
-    local Save = SaveModule.Get()
-    if not Save then return end
+    
+    if currentRebirths == 0 or currentRebirths % 5 ~= 0 then return end
 
-    local targetZone = InstanceZoneCmds.GetMaximumOwnedZoneNumber() + 1
+    local targetZone = (currentRebirths / 5) + 1
+    local ownedZone = InstanceZoneCmds.GetMaximumOwnedZoneNumber()
+    if ownedZone >= targetZone then return end
+
     local requiredCoins = GetZoneCost(targetZone)
     if requiredCoins == math.huge then return end
 
+    print(string.format("[Event] Need to buy zone %d for rebirth %d", targetZone, currentRebirths))
+    
     while GetGymCoins() < requiredCoins do
         print(string.format("[Event] Waiting for %d GymCoins to unlock zone %d...", requiredCoins, targetZone))
         task.wait(1)
@@ -215,8 +215,6 @@ function Event.TryBuyZoneForRebirth(currentRebirths)
 
     if success then
         print(string.format("[Event] Zone %d successfully purchased!", targetZone))
-
-        
         task.delay(1, function()
             Event.TeleportToBestZone()
         end)
@@ -224,6 +222,7 @@ function Event.TryBuyZoneForRebirth(currentRebirths)
         warn("[Event] Failed to purchase zone:", result)
     end
 end
+
 
 
 
